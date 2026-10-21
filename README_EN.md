@@ -2,14 +2,16 @@
 
 # English Teaching-Aid Proofreading Skill
 
-An AI proofreading skill for English learning materials for Grades 7–9, including synchronized exercises, reading, grammar, writing, and exam preparation. British English is the default. The skill can process Word files, PDFs, scans, and copyable text, subject to the capabilities of the host platform.
+An AI proofreading skill for English learning materials for Grades 7–9, including synchronized exercises, reading, grammar, writing, and exam preparation. British English is the default. It can process Word files, PDFs, scanned pages, individual images, and copyable text; a multimodal model must inspect page images.
 
 ## What It Does
 
 - Checks spelling, word forms, grammar, usage, collocations, punctuation, capitalization, numbers, symbols, formatting, and Chinese-English alignment.
+- When articles or exercises involve public signs, public-service information, or related institution/facility terms, consult the topic-specific GB/T 30240 index. Signage style is not imposed on ordinary prose.
 - Solves exercises independently before checking the answer key and explanations. It looks for mismatched numbering, missing answers, missing conditions, invalid reasoning, and questions with no or multiple valid answers.
-- Performs three complete proofreading passes. Long files are split into consecutive page ranges or complete question sets, and each batch receives all three passes.
+- Performs three complete passes: an initial pass, a blind second pass, and a cold-read third pass. Copyable prompts guide each pass. Long files are split into consecutive page ranges or complete question sets, and each batch receives all three passes.
 - Produces an issue list with page and question locations, source text, evidence, and suggested editorial action. It reports the scope checked and any limitations.
+- Optional scripts prepare page images and text, check question/answer structure, validate reports and pass records, and generate long Word reports. They do not replace model judgment of language or answers.
 - Reports suggestions only. It does not edit, overwrite, or reformat the source manuscript; the editor makes the final decisions.
 
 ## Installation
@@ -65,7 +67,7 @@ For scans, OCR is only an aid to locating text. Character-level issues should be
 
 Reports use three sections in this order: “Summary → Issues → Coverage and limitations.” Each issue has a unique ID, location, category and status, impact, confidence, source text, rationale, and suggested editorial action. Confirmed errors are distinguished from style inconsistencies, items for editorial confirmation, and cases with insufficient material.
 
-When the final report exceeds approximately 3,000 Chinese characters, the skill attempts to generate a complete Word report and returns a short summary with a file link in chat. The report never replaces or overwrites the source manuscript.
+When the final report exceeds approximately 3,000 visible non-whitespace characters, the script automatically generates a complete Word report and returns a short summary with a file link in chat. The report never replaces or overwrites the source manuscript.
 
 ## Reference Materials
 
