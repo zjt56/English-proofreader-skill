@@ -164,15 +164,17 @@ def make_document(report: dict[str, Any]) -> ET.Element:
             if value not in (None, ""):
                 add_paragraph(body, f"{label}：{display(value)}")
 
-    add_paragraph(body, "覆盖与限制", "Heading1")
+    add_paragraph(body, "简短说明", "Heading1")
     coverage = report.get("coverage", {})
     if isinstance(coverage, dict):
-        add_paragraph(body, f"三校完成：{'是' if coverage.get('three_passes_complete') else '否'}")
-        for batch in coverage.get("batches", []):
-            if isinstance(batch, dict):
-                add_paragraph(body, f"批次 {display(batch.get('id'))}｜范围：{display(batch.get('scope'))}｜轮次：{display(batch.get('passes'))}")
-        for limitation in coverage.get("limitations", []):
-            add_paragraph(body, f"限制：{display(limitation)}")
+        limitations = [display(item) for item in coverage.get("limitations", []) if str(item).strip()]
+        if coverage.get("three_passes_complete") and not limitations:
+            add_paragraph(body, "已完成本次指定范围的三校。")
+        elif limitations:
+            status = "三校尚未全部完成。" if not coverage.get("three_passes_complete") else "已完成本次指定范围的三校。"
+            add_paragraph(body, f"{status} 限制：{'；'.join(limitations)}")
+        else:
+            add_paragraph(body, "三校状态以内部校验记录为准。")
 
     section = ET.SubElement(body, W + "sectPr")
     ET.SubElement(section, W + "pgSz", {W + "w": "11906", W + "h": "16838"})
