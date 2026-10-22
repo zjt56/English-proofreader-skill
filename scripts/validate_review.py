@@ -116,6 +116,36 @@ def validate(data: dict[str, Any], manifest: dict[str, Any] | None = None) -> di
             elif state != "complete":
                 all_complete = False
 
+        proof_status = batch.get("proof_status")
+        if any(passes.get(name) == "complete" for name in PASS_NAMES):
+            if not isinstance(proof_status, dict):
+                message = f"batch {batch['id']} needs proof_status for inspection, typesetting, and red check"
+                if coverage.get("three_passes_complete") is True:
+                    errors.append(message)
+                else:
+                    warnings.append(message)
+            else:
+                for pass_name in PASS_NAMES:
+                    if passes.get(pass_name) != "complete":
+                        continue
+                    proof = proof_status.get(pass_name)
+                    if not isinstance(proof, dict):
+                        message = f"batch {batch['id']} needs proof_status.{pass_name}"
+                        if coverage.get("three_passes_complete") is True:
+                            errors.append(message)
+                        else:
+                            warnings.append(message)
+                        continue
+                    if proof.get("inspection") != "complete":
+                        message = f"batch {batch['id']} {pass_name} inspection is not complete"
+                        (errors if coverage.get("three_passes_complete") is True else warnings).append(message)
+                    if proof.get("sent_to_typesetting") is not True:
+                        message = f"batch {batch['id']} {pass_name} was not sent to typesetting"
+                        (errors if coverage.get("three_passes_complete") is True else warnings).append(message)
+                    if proof.get("red_check") != "complete":
+                        message = f"batch {batch['id']} {pass_name} red check is not complete"
+                        (errors if coverage.get("three_passes_complete") is True else warnings).append(message)
+
     limitations = coverage.get("limitations", [])
     if not isinstance(limitations, list):
         errors.append("coverage.limitations must be an array")

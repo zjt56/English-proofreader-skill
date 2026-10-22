@@ -49,7 +49,8 @@ DOCX 中段落/表格清单使用稳定块编号，不凭抽取文本推断页�
   "issues": [],
   "coverage": {
     "three_passes_complete": false,
-    "batches": [{"id": "B01", "scope": "PDF第1-3页", "passes": {"first": "complete", "second": "complete", "third": "not_done"}}],
+    "review_stage": "二校",
+    "batches": [{"id": "B01", "scope": "PDF第1-3页", "passes": {"first": "complete", "second": "complete", "third": "not_done"}, "proof_status": {"first": {"inspection": "complete", "sent_to_typesetting": true, "red_check": "complete"}, "second": {"inspection": "complete", "sent_to_typesetting": true, "red_check": "complete"}, "third": {"inspection": "not_done", "sent_to_typesetting": false, "red_check": "not_done"}}}],
     "limitations": []
   }
 }

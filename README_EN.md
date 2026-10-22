@@ -9,7 +9,7 @@ An AI proofreading skill for English learning materials for Grades 7–9, includ
 - Checks spelling, word forms, grammar, usage, collocations, punctuation, capitalization, numbers, symbols, formatting, and Chinese-English alignment.
 - When articles or exercises involve public signs, public-service information, or related institution/facility terms, consult the topic-specific GB/T 30240 index. Signage style is not imposed on ordinary prose.
 - Solves exercises independently before checking the answer key and explanations. It looks for mismatched numbering, missing answers, missing conditions, invalid reasoning, and questions with no or multiple valid answers.
-- Performs three complete passes: an initial pass, a blind second pass, and a cold-read third pass. Copyable prompts guide each pass. Long files are split into consecutive page ranges or complete question sets, and each batch receives all three passes.
+- Follows the Mudu workflow: first, second, and third proofreading passes, with typesetting correction and red-check confirmation after each pass. A separate full-read stage follows third proof when requested. Copyable prompts guide each stage.
 - Produces an issue list with page and question locations, source text, evidence, and suggested editorial action. It reports the scope checked and any limitations.
 - Optional scripts prepare page images and text, check question/answer structure, validate reports and pass records, and generate long Word reports. They do not replace model judgment of language or answers.
 - Reports suggestions only. It does not edit, overwrite, or reformat the source manuscript; the editor makes the final decisions.

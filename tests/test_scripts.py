@@ -46,7 +46,16 @@ def valid_report() -> dict:
         ],
         "coverage": {
             "three_passes_complete": True,
-            "batches": [{"id": "B01", "scope": "PDF 第 1 页", "passes": {"first": "complete", "second": "complete", "third": "complete"}}],
+            "batches": [{
+                "id": "B01",
+                "scope": "PDF 第 1 页",
+                "passes": {"first": "complete", "second": "complete", "third": "complete"},
+                "proof_status": {
+                    "first": {"inspection": "complete", "sent_to_typesetting": True, "red_check": "complete"},
+                    "second": {"inspection": "complete", "sent_to_typesetting": True, "red_check": "complete"},
+                    "third": {"inspection": "complete", "sent_to_typesetting": True, "red_check": "complete"},
+                },
+            }],
             "limitations": [],
         },
     }
