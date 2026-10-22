@@ -1,0 +1,18 @@
+{
+  "example_only": "虚构示例：预期找到colour/color体例候选；引用和干扰项不报。",
+  "extraction_verified": true,
+  "complete": {"rules": true, "consistency_entries": true},
+  "expected_counts": {"rules": 2, "consistency_entries": 6},
+  "rules": [
+    {"id": "colour", "label": "普通叙述中的英式拼写", "forms": ["colour", "color"], "preferred": "colour", "basis": "本次任务明确采用英式英语；仅比较普通叙述中的这一词义。"},
+    {"id": "q-mark", "label": "Unit 1 同级题号后符号", "forms": ["1.", "1、"]}
+  ],
+  "consistency_entries": [
+    {"rule_id": "colour", "scope": "本稿普通叙述", "form": "colour", "role": "prose", "source_id": "body", "file_page": 1, "locator": "正文文件页1第1段", "quote": "What is your favourite colour?"},
+    {"rule_id": "colour", "scope": "本稿普通叙述", "form": "color", "role": "prose", "source_id": "body", "file_page": 2, "locator": "正文文件页2第3段", "quote": "The color is red."},
+    {"rule_id": "colour", "scope": "本稿普通叙述", "form": "color", "role": "quotation", "source_id": "body", "file_page": 3, "locator": "正文文件页3原文引语", "quote": "The source uses the word color."},
+    {"rule_id": "colour", "scope": "本稿普通叙述", "form": "color", "role": "distractor", "source_id": "body", "file_page": 3, "locator": "正文文件页3第4题辨析选项", "quote": "B. color"},
+    {"rule_id": "q-mark", "scope": "Unit 1 单选", "form": "1.", "role": "label", "source_id": "body", "file_page": 4, "locator": "正文文件页4单选第1题", "quote": "1. Choose the correct answer."},
+    {"rule_id": "q-mark", "scope": "Unit 1 阅读大题", "form": "1、", "role": "label", "source_id": "body", "file_page": 4, "locator": "正文文件页4阅读大题", "quote": "1、阅读理解"}
+  ]
+}

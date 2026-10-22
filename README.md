@@ -2,23 +2,19 @@
 
 # 初中英语教辅编校 Skill
 
-面向七至九年级英语教辅的 AI 编校技能，适用于同步练习、阅读、语法、写作和中考备考材料。默认以英式英语为目标，可处理 Word、PDF、扫描页、单页图片及可复制文本，需由多模态大模型核读原图。
+协助编辑校对七至九年级同步练习、阅读、语法、写作、中考备考和词汇背记材料。默认英式英语，支持Word、PDF、扫描页、图片及文本。**只出问题和修改建议，不改原稿。**
 
-## 功能
+## 能做什么
 
-- 检查拼写、词形、语法、用词、搭配、标点、大小写、数字符号、格式及中英文表达对应等问题。
-- 文章或题目涉及公共标识、公共服务信息及相关机构/设施术语时，按主题参考 GB/T 30240 英文译写索引；普通叙述文不套用标识语体。
-- 独立核对题目、选项、答案和解析，关注错号、漏答、条件缺失、无解、多解和推理不成立。
-- 以木牍手册的一校、二校、三校及“送录排改稿—核红”闭环为主流程；三校完成后可另行执行通读。提供可复制的分轮模型指令，长稿按连续页或完整题组分批。
-- 输出带页码、题号、原文证据、问题依据及建议处理的问题清单；面向编辑先给校对结果，覆盖限制仅在影响结论时简短说明，完整三校记录保存在结构化报告中。
-- 提供可选脚本整理逐页图像和文字、核对题号/答案结构、校验报告与三校记录，并生成长报告 Word；脚本不代替大模型判断语言和答案。
-- 只提出修改建议，不会直接修改、覆盖或重排原稿。最终判断和修改由编辑完成。
+- 查拼写、语法、词义搭配、标点、编号、中文题干/译文/解析及中英对应。
+- 独立解题后核答案和解析；词表专查音标、词性义项、词形及附表，批量核目录/索引页码和组内序号。
+- 同一版本完整检查三遍：初检、独立复读、冷读后复核；正式木牍三校另按实际改排与核红推进。
+- 理解挖空、括号、选项和干扰项的题型功能，过滤抽取乱码、错栏及合法变体造成的误报。
+- 输出页码、题号/词条、原文、错误类型、具体问题和改法；长报告或用户要求时生成真实Word文档。
 
 ## 安装
 
-### Codex
-
-**Windows PowerShell：**
+Codex的Windows PowerShell：
 
 ```powershell
 $skills = if ($env:CODEX_HOME) { Join-Path $env:CODEX_HOME 'skills' } else { Join-Path $env:USERPROFILE '.codex\skills' }
@@ -26,7 +22,7 @@ New-Item -ItemType Directory -Force -Path $skills | Out-Null
 git clone https://github.com/zjt56/English-proofreader-skill.git (Join-Path $skills 'english-teaching-aid-proofreader')
 ```
 
-**macOS/Linux：**
+macOS/Linux：
 
 ```bash
 skills_dir="${CODEX_HOME:-$HOME/.codex}/skills"
@@ -34,40 +30,46 @@ mkdir -p "$skills_dir"
 git clone https://github.com/zjt56/English-proofreader-skill.git "$skills_dir/english-teaching-aid-proofreader"
 ```
 
-以上命令会保留 `SKILL.md` 和 `references/` 的相对结构。若技能目录已经存在，请先备份或移除旧版本，避免克隆失败。
+目录已存在时先备份或选择其他位置，避免覆盖。重新加载技能后，可用 `$english-teaching-aid-proofreader` 调用。其他支持Agent Skills的平台按其方式导入，保留整个技能包的相对目录；文件阅读、Python和Word生成能力以宿主环境为准。
 
-重新加载技能后，可显式调用 `$english-teaching-aid-proofreader`，也可直接提出英语教辅编校任务。
+## 怎么用
 
-### 其他支持 Agent Skills 的平台
-
-按照平台的技能安装方式导入本仓库，并确保 `SKILL.md` 与 `references/` 一同保留。不同平台的技能目录和文件访问能力可能不同；长报告 Word 输出也取决于运行环境是否支持生成和检查 DOCX。
-
-## 使用方法
-
-提交稿件时，尽量一并提供：
-
-1. 要校对的稿件，以及明确的文件版本。
-2. 核查范围，例如文件页码、印刷页码、章节或题号；未指定时默认检查所提交的全部可读内容。
-3. 与题目相关的阅读材料、图表、答案和解析。缺少材料时，技能会说明因此无法核验的部分，不会自行补全。
-4. 英语变体或出版社体例要求。未另行指定时默认英式英语；英、美拼写均可接受时，混用通常作为一致性问题报告，而不是直接判作拼写错误。
-
-示例指令：
+提供稿件、版本及核查范围；相关答案、解析、图表和出版社体例一并提供。未指定范围时检查提交的全部可读内容，缺必要材料时说明待核，不猜补。
 
 ```text
-请使用 $english-teaching-aid-proofreader，校对附件 PDF 第 1–12 页。
-默认按英式英语检查。请把阅读材料、题目、答案和解析一并核对，
-按木牍流程完成当前校次的检查、送录排改稿和核红后，按 PDF 文件页码和题号输出问题清单；三校后如要求通读，再执行通读检查。
-不要修改原稿；不确定的地方请列为“编辑确认”或“材料不足”。
+请用 $english-teaching-aid-proofreader 校对附件PDF第1–12页。
+按英式英语，同一版本完整检查三遍；核题干、答案及解析。
+列出页码、题号、原文、错误类型、具体问题和修改建议，不改原稿。
+不确定项交编辑确认；请输出Word报告。
 ```
 
-对于扫描件，OCR 仅用于辅助检索；字符类问题须尽可能回看原图。图像不清或无法读取时，会标明“原图待核”，不会依据 OCR 猜定原文。
+技能执行“判断读取方法 → 识别结构与重点 → 按适用规则检查 → 报告”。试读只选方法，不替代全文检查。扫描页由能看图的模型核读，字符争议回原图。入口见 [SKILL.md](SKILL.md)，读取、分批及正式校次区别见 [流程细节](references/proofreading-workflow.md)。
 
-## 输出方式
+**入口精简，细节按需读。** 无需先加载全部参考：词表读词条规则，练习读相关语法/题答章节；工具参数和JSON字段只在使用工具时查。详细知识点、正反例和差错示例保留。
 
-报告面向编辑采用“校对结果 → 问题条目 → 简短说明”。问题条目提供唯一编号、位置、问题类别与性质、影响等级、置信度、原文证据、问题依据和建议处理。已确认错误、体例/一致性问题、编辑确认项和材料不足项会区分标注；逐批三校状态保存在结构化报告中。
+## 报告
 
-若最终报告正文超过约 3,000 个可见非空白字符，脚本会自动生成完整 Word 报告，并在对话中提供简短摘要和文件链接。原稿不会被报告文件替代或覆盖。
+采用“校对结果 → 问题条目 → 简短说明”，明确差错、体例/一致性、编辑确认和材料不足分开统计。全稿同类问题可合并，但保留范围、定位样例、实际次数和具体改法。内部流程台账不堆给编辑。
+
+用户要求Word、报告超过3000个可见非空白字符，或确认位置超过10处时生成真实`.docx`并给链接。没有实际生成能力时说明，不伪装文件。见 [输出规范](references/output-format.md)及 [虚构报告示例](examples/editor-report-example.md)。
+
+## 辅助工具
+
+Word/WPS、Grammarly、秘塔写作猫和LanguageTool可按现有能力提供候选；没有外部检查器也能工作。AI结合原稿判断，不自动采纳或上传未公开稿件。
+
+本包脚本负责读取、结构/体例比较、报告校验和Word生成。Python 3.10+；结构检查和Word生成只需标准库，PDF需PyMuPDF，DOCX分页需LibreOffice或宿主预览，python-docx仅供可选独立测试。先运行：
+
+```text
+python scripts/check_dependencies.py
+python scripts/prepare_review.py manuscript.pdf --pages 1,3-5 --no-render --output-dir probe_assets
+python scripts/cross_check_index.py examples/structural-review-input.json
+python scripts/check_consistency.py examples/consistency-input.json --output consistency-findings.json
+python scripts/validate_review.py examples/single-delivery-report.json
+python scripts/build_report_docx.py examples/single-delivery-report.json example-report.docx --always
+```
+
+样例为虚构。一致性样例故意含一项候选，退出1属于预期结果；0表示输入记录内未见不符，2表示数据/运行错误。结构脚本接收已核实的记录，不能自动将任意PDF变成可信词表；未整理全不得宣称全书通过。完整用法见 [工具说明](references/mechanical-checks.md)、[结构契约](references/structured-checks.md)和 [报告字段](references/report-schema.md)。维护脚本可运行 `python -m unittest discover -s tests -v`。
 
 ## 规范资料
 
-本仓库目前不包含公司的内部编辑手册或其他未整理的本地规范。任务涉及出版社专属体例时，请同时提供适用规范；没有明确依据的事项不会被表述为公司强制规则。
+仅保留 [出版参考方向](references/publication-reference-guide.md)和 [公共服务方向](references/public-service-reference-guide.md)，提示AI遇到疑点应查哪类正式资料，不收录OCR规范原文或本地文件索引。需出版社专属规则时提供适用规定；方向指引不当作强制条文。普通叙述不机械套用公共标识语体。

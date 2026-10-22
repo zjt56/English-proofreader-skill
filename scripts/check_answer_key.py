@@ -9,6 +9,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any
+from runtime_common import configure_stdio
 
 
 def normalized_id(value: Any) -> str:
@@ -72,6 +73,7 @@ def analyze(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> int:
+    configure_stdio()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("answer_map", type=Path, help="JSON with questions[] and answers[]")
     args = parser.parse_args()

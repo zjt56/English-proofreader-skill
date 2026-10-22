@@ -14,6 +14,9 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from pdf_layout import analyze_layout
+from runtime_common import configure_stdio
+
 WORD_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 W = "{" + WORD_NS + "}"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp"}
@@ -80,28 +83,55 @@ def extract_docx(path: Path) -> tuple[list[dict[str, object]], list[str]]:
 
 def load_fitz():
     try:
-        import fitz  # type: ignore[import-not-found]
-    except ImportError as exc:
-        raise RuntimeError("PDF page rendering requires PyMuPDF. Install it with: python -m pip install pymupdf") from exc
-    return fitz
+        import pymupdf
+        return pymupdf
+    except ModuleNotFoundError as exc:
+        if exc.name != "pymupdf":
+            raise RuntimeError(f"PyMuPDF dependency failed: {exc}") from exc
+        try:
+            import fitz  # compatibility with older PyMuPDF installations
+            if not hasattr(fitz, "open") or not hasattr(fitz, "Matrix"):
+                raise ImportError("fitz is not PyMuPDF")
+            return fitz
+        except ImportError as legacy_exc:
+            raise RuntimeError("PDF extraction requires PyMuPDF: python -m pip install pymupdf") from legacy_exc
 
 
-def render_pdf(path: Path, page_dir: Path, dpi: int, source_label: str) -> tuple[list[dict[str, object]], list[str]]:
+def parse_pages(value: str | None, count: int) -> list[int]:
+    if value is None:
+        return list(range(1, count + 1))
+    selected = set()
+    for part in value.split(","):
+        if not re.fullmatch(r"\d+(?:-\d+)?", part.strip()):
+            raise ValueError("--pages must use 1-based values such as 1,3-5")
+        ends = [int(n) for n in part.strip().split("-")]
+        start, stop = ends[0], ends[-1]
+        if start < 1 or stop < start or stop > count:
+            raise ValueError(f"Page range must be within 1..{count}")
+        selected.update(range(start, stop + 1))
+    return sorted(selected)
+
+
+def render_pdf(path: Path, page_dir: Path, dpi: int, source_label: str,
+               selected_pages: str | None = None, render: bool = True,
+               columns: str = "auto", reading_order: str = "column", layout_config: dict | None = None) -> tuple[list[dict[str, object]], list[str]]:
     fitz = load_fitz()
     pages: list[dict[str, object]] = []
     warnings: list[str] = []
-    document = fitz.open(path)
-    for index, page in enumerate(document, start=1):
-        image_name = f"page-{index:04d}.png"
-        image_path = page_dir / image_name
-        pixmap = page.get_pixmap(matrix=fitz.Matrix(dpi / 72, dpi / 72), alpha=False)
-        pixmap.save(image_path)
-        text = page.get_text("text")
-        pages.append({"file_page": index, "locator": f"PDF 文件第 {index} 页", "image": f"pages/{image_name}", "text": text})
-        if not text.strip():
-            warnings.append(f"PDF page {index} has no selectable text; inspect the page image directly.")
-    warnings.append(f"PDF pages were rendered for visual review ({source_label}); extraction is not OCR and does not validate the content.")
-    document.close()
+    with fitz.open(path) as document:
+        for index in parse_pages(selected_pages, len(document)):
+            page = document[index - 1]
+            config = (layout_config or {}).get("pages", {}).get(str(index), {})
+            layout = analyze_layout(page.get_text("rawdict"), list(page.rect), columns, reading_order, config)
+            record = {"file_page": index, "locator": f"PDF 文件第 {index} 页", **layout}
+            if render:
+                image_name = f"page-{index:04d}.png"
+                page.get_pixmap(matrix=fitz.Matrix(dpi / 72, dpi / 72), alpha=False).save(page_dir / image_name)
+                record["image"] = f"pages/{image_name}"
+            pages.append(record)
+            if not record["text"].strip():
+                warnings.append(f"PDF page {index} has no selectable text; inspect the page image directly.")
+    warnings.append(f"Layout is unverified ({source_label}); confirm representative pages and all disputed glyphs against the original. Extraction is not OCR.")
     return pages, warnings
 
 
@@ -131,7 +161,9 @@ def image_inputs(source: Path) -> list[Path]:
     return sorted(candidates, key=lambda path: natural_key(path.name))
 
 
-def prepare(source: Path, output_dir: Path, dpi: int) -> dict[str, object]:
+def prepare(source: Path, output_dir: Path, dpi: int, *, selected_pages: str | None = None,
+            render: bool = True, columns: str = "auto", reading_order: str = "column",
+            layout_config: dict | None = None, source_id: str | None = None) -> dict[str, object]:
     if output_dir.exists():
         raise FileExistsError(f"Output directory already exists: {output_dir}")
     output_dir.mkdir(parents=True)
@@ -158,7 +190,7 @@ def prepare(source: Path, output_dir: Path, dpi: int) -> dict[str, object]:
         warnings.append("Image inputs are indexed without OCR. The multimodal model must inspect each original-resolution page image.")
     elif source.suffix.casefold() == ".pdf":
         source_hash = sha256_file(source)
-        pages, page_warnings = render_pdf(source, page_dir, dpi, "source PDF")
+        pages, page_warnings = render_pdf(source, page_dir, dpi, "source PDF", selected_pages, render, columns, reading_order, layout_config)
         warnings.extend(page_warnings)
     elif source.suffix.casefold() == ".docx":
         source_hash = sha256_file(source)
@@ -169,7 +201,7 @@ def prepare(source: Path, output_dir: Path, dpi: int) -> dict[str, object]:
             if pdf_path is None:
                 warnings.append("LibreOffice is unavailable; DOCX body text was extracted but page layout and page numbers were not rendered.")
             else:
-                pages, page_warnings = render_pdf(pdf_path, page_dir, dpi, "temporary DOCX conversion")
+                pages, page_warnings = render_pdf(pdf_path, page_dir, dpi, "temporary DOCX conversion", selected_pages, render, columns, reading_order, layout_config)
                 warnings.extend(page_warnings)
     elif source.suffix.casefold() == ".txt":
         source_hash = sha256_file(source)
@@ -182,12 +214,15 @@ def prepare(source: Path, output_dir: Path, dpi: int) -> dict[str, object]:
         raise ValueError("Supported inputs are PDF, DOCX, TXT, image files, or a directory of images.")
 
     manifest: dict[str, object] = {
+        "schema_version": 2,
+        "source_id": source_id or source.name,
         "source_file": source.name,
         "source_type": source_type,
         "source_sha256": source_hash,
         "pages": pages,
         "blocks": blocks,
         "warnings": warnings,
+        "selection": {"pages": selected_pages or "all", "rendered": render},
     }
     manifest_path = output_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -195,10 +230,17 @@ def prepare(source: Path, output_dir: Path, dpi: int) -> dict[str, object]:
 
 
 def main() -> int:
+    configure_stdio()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path, help="PDF, DOCX, TXT, one image, or a folder of images")
     parser.add_argument("--output-dir", type=Path, help="new output folder; existing folders are never overwritten")
     parser.add_argument("--dpi", type=int, default=200, help="PDF render resolution (default: 200)")
+    parser.add_argument("--pages", help="PDF or converted DOCX pages, e.g. 1,3-5; original file_page is preserved")
+    parser.add_argument("--no-render", action="store_true", help="extract geometry/text without rendering images")
+    parser.add_argument("--columns", default="auto", help="auto or 1..8 equal-width columns; prefer layout-config for unequal columns")
+    parser.add_argument("--reading-order", choices=("column", "row"), default="column")
+    parser.add_argument("--layout-config", type=Path, help="JSON pages/regions/bbox/column_breaks overrides")
+    parser.add_argument("--source-id", help="unique source identity for multi-file reports")
     args = parser.parse_args()
     source = args.source.expanduser().resolve()
     if not source.exists():
@@ -207,10 +249,16 @@ def main() -> int:
         parser.error("--dpi must be between 100 and 400")
     output_dir = args.output_dir.expanduser().resolve() if args.output_dir else source.parent / (source.stem + "_review_assets")
     try:
-        manifest = prepare(source, output_dir, args.dpi)
-    except (OSError, ValueError, RuntimeError, zipfile.BadZipFile, ET.ParseError, subprocess.TimeoutExpired) as exc:
+        if args.columns != "auto" and (not args.columns.isdigit() or not 1 <= int(args.columns) <= 8):
+            raise ValueError("--columns must be auto or 1..8")
+        if args.pages and source.suffix.casefold() not in (".pdf", ".docx"):
+            raise ValueError("--pages applies only to PDF or converted DOCX")
+        config = json.loads(args.layout_config.read_text(encoding="utf-8-sig")) if args.layout_config else None
+        manifest = prepare(source, output_dir, args.dpi, selected_pages=args.pages, render=not args.no_render,
+                           columns=args.columns, reading_order=args.reading_order, layout_config=config, source_id=args.source_id)
+    except (OSError, ValueError, TypeError, KeyError, RuntimeError, zipfile.BadZipFile, ET.ParseError, subprocess.TimeoutExpired) as exc:
         parser.exit(2, f"Error: {exc}\n")
-    print(f"Prepared {len(manifest['pages'])} page image(s) and {len(manifest['blocks'])} text block(s).")
+    print(f"Prepared {len(manifest['pages'])} page record(s) and {len(manifest['blocks'])} text block(s).")
     print(f"Manifest: {output_dir / 'manifest.json'}")
     for warning in manifest["warnings"]:
         print(f"Warning: {warning}")

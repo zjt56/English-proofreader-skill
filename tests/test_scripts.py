@@ -133,9 +133,9 @@ class FileToolTests(unittest.TestCase):
             self.assertIn("10.png", locators[1])
             self.assertIn("cover.png", locators[2])
 
-    @unittest.skipUnless(importlib.util.find_spec("fitz"), "PyMuPDF is optional")
+    @unittest.skipUnless(importlib.util.find_spec("pymupdf") or importlib.util.find_spec("fitz"), "PyMuPDF is optional")
     def test_prepare_pdf_renders_page_and_extracts_text(self) -> None:
-        import fitz
+        fitz = prepare_review.load_fitz()
 
         with tempfile.TemporaryDirectory() as temp_name:
             folder = Path(temp_name)
@@ -177,9 +177,10 @@ class FileToolTests(unittest.TestCase):
                 relationships = ET.fromstring(archive.read("_rels/.rels"))
             self.assertTrue(content_types.tag.endswith("Types"))
             self.assertTrue(relationships.tag.endswith("Relationships"))
-            from docx import Document
-            opened = Document(output)
-            self.assertGreater(len(opened.paragraphs), 0)
+            if importlib.util.find_spec("docx"):
+                from docx import Document
+                opened = Document(output)
+                self.assertGreater(len(opened.paragraphs), 0)
             text = "".join(node.text or "" for node in document.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t"))
             self.assertIn("英语教辅编校问题清单", text)
             self.assertIn("She go to school.", text)

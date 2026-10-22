@@ -1,0 +1,11 @@
+{
+  "example_only": "虚构的600×800点页面，上下两节，每节双栏；实际坐标须对照原页。",
+  "pages": {
+    "1": {
+      "regions": [
+        {"bbox": [0, 0, 600, 400], "column_breaks": [300], "reading_order": "column"},
+        {"bbox": [0, 400, 600, 800], "column_breaks": [300], "reading_order": "column"}
+      ]
+    }
+  }
+}

@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 import zipfile
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
+
+from validate_review import validate
+from runtime_common import configure_stdio
 
 W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 R_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -27,13 +29,8 @@ ET.register_namespace("pr", REL_NS)
 ET.register_namespace("ct", CT_NS)
 
 ISSUE_FIELDS = (
-    ("category", "错误领域"),
     ("status", "问题性质"),
-    ("severity", "影响等级"),
-    ("confidence", "置信度"),
-    ("explanation", "问题说明及依据"),
     ("basis", "核验依据/来源"),
-    ("suggestion", "建议处理"),
 )
 
 
@@ -46,6 +43,10 @@ def display(value: Any) -> str:
 
 
 def add_run(paragraph: ET.Element, text: str, bold: bool = False) -> None:
+    for character in text:
+        code = ord(character)
+        if not (code in (9, 10, 13) or 0x20 <= code <= 0xD7FF or 0xE000 <= code <= 0xFFFD or 0x10000 <= code <= 0x10FFFF):
+            raise ValueError(f"Report contains invalid XML character U+{code:04X}; verify the extracted glyph before exporting")
     for line_index, line in enumerate(text.splitlines() or [""]):
         if line_index:
             run = ET.SubElement(paragraph, W + "r")
@@ -67,31 +68,17 @@ def add_paragraph(body: ET.Element, text: str, style: str = "Normal", bold: bool
     add_run(paragraph, text, bold=bold)
 
 
-def location_revision(location: dict[str, Any]) -> tuple[str, str]:
-    """Return a concrete error type and a conservative, minimal revision hint.
-
-    Reports may be authored by a weaker model that only supplies a source quote.
-    The fallback is limited to unambiguous ASCII comma/semicolon spacing and is
-    labelled as a suggestion in the document; it never changes the source.
-    """
-    quote = display(location.get("quote", ""))
+def location_revision(location: dict[str, Any], issue: dict[str, Any] | None = None) -> tuple[str, str]:
+    """Format authored advice only. A report renderer must never invent edits."""
+    issue = issue or {}
     error_type = display(location.get("error_type", "")).strip()
     suggested = display(
         location.get("suggested")
         or location.get("correction")
         or location.get("suggestion")
-        or ""
+        or issue.get("suggestion") or ""
     ).strip()
-    if suggested and suggested != quote and not error_type:
-        error_type = "按位置建议核对"
-    if not suggested or suggested == quote:
-        if re.search(r"\s+[,;]", quote):
-            suggested = re.sub(r"\s+([,;])", r"\1", quote, count=1)
-            error_type = error_type or "标点前多余空格"
-        elif re.search(r"[,;](?=[A-Za-z])", quote):
-            suggested = re.sub(r"([,;])(?=[A-Za-z])", r"\1 ", quote, count=1)
-            error_type = error_type or "标点后缺少空格"
-    return error_type or "未细分（请编辑核对）", suggested or "请编辑根据原图核对"
+    return error_type or display(issue.get("category")) or "未细分（请编辑核对）", suggested or "请编辑根据原图核对"
 
 
 def make_styles() -> ET.Element:
@@ -125,46 +112,72 @@ def make_document(report: dict[str, Any]) -> ET.Element:
 
     metadata = report.get("metadata", {})
     if isinstance(metadata, dict):
-        for key, value in metadata.items():
-            add_paragraph(body, f"{key}：{display(value)}")
+        for key, label in (("manuscript", "稿件"), ("scope", "核对范围"), ("report_date", "日期")):
+            if metadata.get(key):
+                add_paragraph(body, f"{label}：{display(metadata[key])}")
 
-    add_paragraph(body, "报告摘要", "Heading1")
+    add_paragraph(body, "校对结果", "Heading1")
     summary = report.get("summary", {})
     if isinstance(summary, dict):
         for key, value in summary.items():
-            add_paragraph(body, f"{key}：{display(value)}")
+            if key == "structural_findings":
+                continue
+            if key == "issue_counts" and isinstance(value, dict):
+                add_paragraph(body, "；".join(f"{status} {count} 项" for status, count in value.items()))
+            elif not isinstance(value, (dict, list)):
+                add_paragraph(body, display(value))
+        for finding in summary.get("structural_findings", []):
+            if not isinstance(finding, dict):
+                continue
+            label = {"pass": "核对未发现不符", "mismatch": "发现不符", "incomplete": "尚未核完"}.get(finding.get("status"), "待核")
+            add_paragraph(body, f"{display(finding.get('check'))}：{label}，已核 {display(finding.get('checked_count'))} 条，不符 {display(finding.get('mismatch_count'))} 条。范围：{display(finding.get('scope'))}。")
 
     add_paragraph(body, "问题条目", "Heading1")
     issues = report.get("issues", [])
     if not issues:
         add_paragraph(body, "本次所列范围及可读材料内未发现问题。")
+    else:
+        add_paragraph(body, "以下修改建议供编辑确认，未改动原稿。")
     for issue in issues:
         if not isinstance(issue, dict):
             continue
         locations = issue.get("locations", [])
         locators = "；".join(display(location.get("locator", "")) for location in locations if isinstance(location, dict))
         add_paragraph(body, f"{display(issue.get('id'))}｜{locators}", "Heading2")
-        add_paragraph(body, f"影响位置数：{len(locations)}")
+        if issue.get("severity") == "高":
+            add_paragraph(body, "重点复核：本项可能影响题意、答案或核心信息。", bold=True)
+        scope = issue.get("scope")
+        if isinstance(scope, dict):
+            add_paragraph(body, f"影响范围：{display(scope.get('description'))}")
+        count = issue.get("occurrence_count")
+        if count is not None:
+            estimate = "约 " if issue.get("count_status") == "estimated" else ""
+            add_paragraph(body, f"出现次数：{estimate}{display(count)}；以下列出 {len(locations)} 个定位样例。计数依据：{display(issue.get('count_basis'))}")
+        elif len(locations) > 1:
+            add_paragraph(body, f"影响位置数：{len(locations)}")
         for location in locations:
             if not isinstance(location, dict):
                 continue
             add_paragraph(body, f"位置：{display(location.get('locator', ''))}", bold=True)
+            if location.get("source_id"):
+                add_paragraph(body, f"文件：{display(location['source_id'])}")
             page = location.get("file_page") or location.get("page") or "见位置"
-            question = location.get("question") or location.get("question_id") or "未标明"
-            add_paragraph(body, f"页码：{display(page)}")
-            add_paragraph(body, f"题号：{display(question)}")
+            question = location.get("question") or location.get("question_id") or location.get("entry") or "非题目正文"
+            printed = f"；印刷页 {location['printed_page']}" if location.get("printed_page") is not None else ""
+            add_paragraph(body, f"页码：文件页 {display(page)}{printed}")
+            add_paragraph(body, f"题号/词条：{display(question)}")
             quote = location.get("quote")
             if quote:
                 add_paragraph(body, f"原文证据：{display(quote)}")
-                error_type, suggested = location_revision(location)
+                error_type, suggested = location_revision(location, issue)
                 add_paragraph(body, f"错误类型：{error_type}")
                 add_paragraph(body, f"具体问题：{display(issue.get('explanation') or issue.get('basis') or '请结合原文证据核对')}")
-                add_paragraph(body, f"建议改为：{suggested}（仅供编辑核对，未改动原稿）")
+                add_paragraph(body, f"修改建议：{suggested}")
             elif location.get("error_type") or location.get("suggested"):
-                error_type, suggested = location_revision(location)
+                error_type, suggested = location_revision(location, issue)
                 add_paragraph(body, f"错误类型：{error_type}")
                 add_paragraph(body, f"具体问题：{display(issue.get('explanation') or issue.get('basis') or '请结合位置核对')}")
-                add_paragraph(body, f"建议改为：{suggested}（仅供编辑核对，未改动原稿）")
+                add_paragraph(body, f"修改建议：{suggested}")
         for key, label in ISSUE_FIELDS:
             value = issue.get(key)
             if value not in (None, ""):
@@ -174,7 +187,14 @@ def make_document(report: dict[str, Any]) -> ET.Element:
     coverage = report.get("coverage", {})
     if isinstance(coverage, dict):
         limitations = [display(item) for item in coverage.get("limitations", []) if str(item).strip()]
-        if coverage.get("three_passes_complete") and not limitations:
+        if coverage.get("mode") == "single_delivery":
+            if coverage.get("completed") is True and not limitations:
+                add_paragraph(body, "已完成本次单份稿件的检查与复核。")
+            elif not limitations:
+                add_paragraph(body, "本次按单份稿件交付，已核范围见上。")
+            if limitations:
+                add_paragraph(body, "待核：" + "；".join(limitations))
+        elif coverage.get("three_passes_complete") and not limitations:
             add_paragraph(body, "已完成本次指定范围的三校。")
         elif limitations:
             status = "三校尚未全部完成。" if not coverage.get("three_passes_complete") else "已完成本次指定范围的三校。"
@@ -198,7 +218,16 @@ def visible_character_count(report: dict[str, Any]) -> int:
     )
 
 
+def confirmed_location_count(report: dict[str, Any]) -> int:
+    return sum(issue.get("occurrence_count", len(issue.get("locations", [])))
+               for issue in report.get("issues", []) if isinstance(issue, dict)
+               and issue.get("status") in ("明确差错", "体例/一致性")
+               and type(issue.get("occurrence_count", 0)) is int)
+
+
 def build(report: dict[str, Any], output: Path) -> None:
+    if output.suffix.casefold() != ".docx":
+        raise ValueError("Word report output must use the .docx extension")
     if output.exists():
         raise FileExistsError(f"Refusing to overwrite existing file: {output}")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -241,6 +270,7 @@ def build(report: dict[str, Any], output: Path) -> None:
 
 
 def main() -> int:
+    configure_stdio()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path, help="structured report JSON")
     parser.add_argument("output", type=Path, help="new .docx path; existing files are never overwritten")
@@ -253,8 +283,11 @@ def main() -> int:
             raise ValueError("report JSON top-level value must be an object")
         if args.threshold < 0:
             raise ValueError("--threshold must be zero or greater")
+        validation = validate(report)
+        if not validation["ok"]:
+            raise ValueError("Report validation failed: " + "; ".join(validation["errors"]))
         character_count = visible_character_count(report)
-        if not args.always and character_count <= args.threshold:
+        if not args.always and character_count <= args.threshold and confirmed_location_count(report) <= 10:
             print(f"DOCX not generated: report has {character_count} visible characters; threshold is {args.threshold}.")
             return 0
         build(report, args.output)

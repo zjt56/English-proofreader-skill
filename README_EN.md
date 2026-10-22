@@ -2,23 +2,19 @@
 
 # English Teaching-Aid Proofreading Skill
 
-An AI proofreading skill for English learning materials for Grades 7–9, including synchronized exercises, reading, grammar, writing, and exam preparation. British English is the default. It can process Word files, PDFs, scanned pages, individual images, and copyable text; a multimodal model must inspect page images.
+For Grades 7–9 exercises, reading, grammar, writing, exam preparation and vocabulary books. British English is the default. Supports Word, PDF, scans, images and text. **Reports issues and corrections for an editor to approve; never edits the source.**
 
-## What It Does
+## Capabilities
 
-- Checks spelling, word forms, grammar, usage, collocations, punctuation, capitalization, numbers, symbols, formatting, and Chinese-English alignment.
-- When articles or exercises involve public signs, public-service information, or related institution/facility terms, consult the topic-specific GB/T 30240 index. Signage style is not imposed on ordinary prose.
-- Solves exercises independently before checking the answer key and explanations. It looks for mismatched numbering, missing answers, missing conditions, invalid reasoning, and questions with no or multiple valid answers.
-- Follows the Mudu workflow: first, second, and third proofreading passes, with typesetting correction and red-check confirmation after each pass. A separate full-read stage follows third proof when requested. Copyable prompts guide each stage.
-- Produces an issue list with page and question locations, source text, evidence, and suggested editorial action. It reports the scope checked and any limitations.
-- Optional scripts prepare page images and text, check question/answer structure, validate reports and pass records, and generate long Word reports. They do not replace model judgment of language or answers.
-- Reports suggestions only. It does not edit, overwrite, or reformat the source manuscript; the editor makes the final decisions.
+- Checks spelling, grammar, meaning, collocations, punctuation, numbering, Chinese instructions/translations/explanations, and Chinese-English alignment.
+- Solves exercises before consulting keys and explanations. Vocabulary checks cover phonetics, parts of speech, senses, word forms, appendices, contents/index pages and grouped numbering.
+- Reads the same version three times: initial inspection, independent rereading, then a fresh reading followed by verification. Formal Mudu proofs follow actual revised versions and red-checks.
+- Distinguishes intentional blanks, brackets and distractors from errors; filters extraction noise, column-order failures and legitimate variants.
+- Reports pages, questions/entries, source quotes, error types, concrete problems and corrections. Generates real Word reports when requested or when results exceed the thresholds below.
 
 ## Installation
 
-### Codex
-
-**Windows PowerShell:**
+Codex on Windows PowerShell:
 
 ```powershell
 $skills = if ($env:CODEX_HOME) { Join-Path $env:CODEX_HOME 'skills' } else { Join-Path $env:USERPROFILE '.codex\skills' }
@@ -26,7 +22,7 @@ New-Item -ItemType Directory -Force -Path $skills | Out-Null
 git clone https://github.com/zjt56/English-proofreader-skill.git (Join-Path $skills 'english-teaching-aid-proofreader')
 ```
 
-**macOS/Linux:**
+macOS/Linux:
 
 ```bash
 skills_dir="${CODEX_HOME:-$HOME/.codex}/skills"
@@ -34,41 +30,47 @@ mkdir -p "$skills_dir"
 git clone https://github.com/zjt56/English-proofreader-skill.git "$skills_dir/english-teaching-aid-proofreader"
 ```
 
-These commands preserve the relative structure of `SKILL.md` and `references/`. If the skill directory already exists, back it up or remove it before cloning.
+If the directory already exists, back it up or choose another location. Reload skills, then invoke `$english-teaching-aid-proofreader`. On other Agent Skills platforms, import the whole package and preserve relative paths. File reading, Python and Word generation depend on host capabilities.
 
-After reloading the skill, invoke it explicitly with `$english-teaching-aid-proofreader` or ask for an English teaching-aid proofreading task directly.
+## Usage
 
-### Other Agent Skills platforms
-
-Import this repository according to the platform's skill installation procedure, preserving both `SKILL.md` and `references/`. Skill paths and file-access capabilities vary by platform. Generating and checking a Word report also depends on DOCX support in the host environment.
-
-## How to Use
-
-When submitting a manuscript, include as much of the following as possible:
-
-1. The manuscript and its version.
-2. The requested scope, such as PDF pages, printed page numbers, sections, or question numbers. If no scope is specified, all readable submitted content is checked.
-3. The related reading passages, figures, answer key, and explanations. Missing materials will be reported as limitations; the skill will not invent them.
-4. The required English variant or publisher style. British English is the default. Where both British and American spellings are valid, inconsistent usage is normally reported as a consistency issue rather than a spelling error.
-
-Example prompt:
+Supply the manuscript, version and scope, along with related answer keys, explanations, figures and publisher rules. With no scope specified, all readable submitted content is checked. Missing dependencies are reported rather than invented.
 
 ```text
-Use $english-teaching-aid-proofreader to proofread pages 1–12 of the attached PDF.
-Use British English by default. Check the reading passage, questions, answer key,
-and explanations together. Complete all three proofreading passes and report each
-issue by PDF page and question number. Do not edit the source. Mark uncertain items
-as “For editorial confirmation” or “Insufficient material.”
+Use $english-teaching-aid-proofreader on PDF pages 1–12.
+Use British English and three complete readings of this version.
+Check questions, answers and explanations. Report page, question, source quote,
+error type, problem and correction. Do not edit the manuscript.
+Flag uncertainties for the editor and deliver a Word report.
 ```
 
-For scans, OCR is only an aid to locating text. Character-level issues should be checked against the page image whenever possible. Unclear or unreadable text is marked for image verification rather than guessed from OCR.
+The workflow is: assess reading method → identify structure and priorities → review using applicable rules → report. Sampling only selects the reading method. A model with image access checks scans and verifies disputed characters against the original page. See [SKILL.md](SKILL.md) and [workflow details](references/proofreading-workflow.md).
 
-## Report Format
+**A concise entry point, with details loaded as needed.** Vocabulary books use entry rules; exercises use relevant grammar and answer checks. Tool arguments and JSON fields are read only when needed. Detailed language rules and positive/negative examples remain available.
 
-Reports use three sections in this order: “Summary → Issues → Coverage and limitations.” Each issue has a unique ID, location, category and status, impact, confidence, source text, rationale, and suggested editorial action. Confirmed errors are distinguished from style inconsistencies, items for editorial confirmation, and cases with insufficient material.
+## Reports
 
-When the final report exceeds approximately 3,000 visible non-whitespace characters, the script automatically generates a complete Word report and returns a short summary with a file link in chat. The report never replaces or overwrites the source manuscript.
+Use “Results → Issues → Brief note.” Count confirmed errors, style inconsistencies, editorial questions and insufficient material separately. Grouped issues retain their scope, sample locations, verified counts and corrections. Internal process logs stay out of the editor-facing report.
+
+Generate a real `.docx` when requested, when the report exceeds 3,000 visible non-whitespace characters, or when confirmed locations exceed 10. Provide a file link; do not claim an unavailable file was generated. See [output rules](references/output-format.md) and the [fictional report](examples/editor-report-example.md).
+
+## Auxiliary Tools
+
+Available Word/WPS, Grammarly, Xiezuocat and LanguageTool features can provide candidates. No external checker is required. The model reviews context before accepting candidates; unpublished manuscripts are not uploaded without authorization.
+
+Bundled scripts prepare material, compare structures/styles, validate reports and build Word files. Python 3.10+ is required; structural checks and DOCX generation use the standard library. PDF requires PyMuPDF; DOCX pagination needs LibreOffice or a host preview. python-docx is only an optional independent test dependency.
+
+```text
+python scripts/check_dependencies.py
+python scripts/prepare_review.py manuscript.pdf --pages 1,3-5 --no-render --output-dir probe_assets
+python scripts/cross_check_index.py examples/structural-review-input.json
+python scripts/check_consistency.py examples/consistency-input.json --output consistency-findings.json
+python scripts/validate_review.py examples/single-delivery-report.json
+python scripts/build_report_docx.py examples/single-delivery-report.json example-report.docx --always
+```
+
+Examples are fictional. The consistency example intentionally returns one candidate and exits 1; 0 means no mismatch in supplied records, and 2 means invalid data or an execution error. Structural scripts consume verified records, not arbitrary PDF layouts. Incomplete extraction cannot support a whole-book pass. See [tools](references/mechanical-checks.md), [structure contracts](references/structured-checks.md) and [report fields](references/report-schema.md). When maintaining scripts, run `python -m unittest discover -s tests -v`.
 
 ## Reference Materials
 
-This repository currently does not include the publisher's internal handbook or other local rules that are still being organized. Provide applicable house-style documents with the task. Rules without an explicit basis will not be presented as mandatory publisher requirements.
+The [publication guide](references/publication-reference-guide.md) and [public-service guide](references/public-service-reference-guide.md) indicate what sources to consult. No OCR-derived standards text or local-file indexes are bundled. Supply applicable publisher rules when needed; guides are not mandatory standard clauses. Ordinary prose is not forced into signage style.

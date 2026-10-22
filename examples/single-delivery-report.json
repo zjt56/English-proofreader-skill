@@ -1,0 +1,22 @@
+{
+  "title": "词汇册校对报告（虚构格式示例）",
+  "metadata": {"manuscript": "示例词汇册", "scope": "示例正文文件第1页", "sources": [{"source_id": "body"}]},
+  "summary": {
+    "result": "示例：1项语法问题，涉及2处；结构核对4条未见不符。",
+    "issue_counts": {"明确差错": 1, "体例/一致性": 0, "编辑确认": 0, "材料不足": 0},
+    "structural_findings": [{"check": "索引与正文词头、页码互查", "status": "pass", "checked_count": 4, "mismatch_count": 0, "scope": "虚构示例4条", "evidence": "examples/structural-review-input.json，仅演示字段"}]
+  },
+  "issues": [{
+    "id": "E001", "status": "明确差错", "category": "语法/主谓一致", "severity": "中", "confidence": "高",
+    "scope": {"source_ids": ["body"], "description": "示例文件第1页两条例句"},
+    "occurrence_count": 2, "count_status": "exact", "count_basis": "示例中逐条核实的两个位置，仅演示范围条目。",
+    "locations": [
+      {"source_id": "body", "locator": "正文文件页1 apple例句", "file_page": 1, "entry": "apple", "quote": "She like apples.", "suggested": "She likes apples."},
+      {"source_id": "body", "locator": "正文文件页1 banana例句", "file_page": 1, "entry": "banana", "quote": "He like bananas.", "suggested": "He likes bananas."}
+    ],
+    "explanation": "一般现在时第三人称单数主语后的肯定句谓语缺-s。",
+    "basis": "一般现在时主谓一致；虚构例句，无命题干扰功能。", "suggestion": "将两处 like 分别改为 likes。"
+  }],
+  "coverage": {"mode": "single_delivery", "completed": true, "three_passes_complete": false, "required_internal_readings": 3,
+    "batches": [{"id": "B01", "scope": "示例文件第1页", "checks": {"structural": "complete", "semantic": "complete", "verification": "complete"}, "internal_readings": 3}], "limitations": []}
+}
