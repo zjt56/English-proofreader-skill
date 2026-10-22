@@ -6,7 +6,7 @@ For Grades 7–9 exercises, reading, grammar, writing, exam preparation and voca
 
 ## Capabilities
 
-- Checks spelling, grammar, meaning, collocations, punctuation, numbering, Chinese instructions/translations/explanations, and Chinese-English alignment.
+- Checks spelling, grammar, meaning, collocations, punctuation, numbering, Chinese instructions/translations/explanations, and Chinese-English alignment. It explicitly cross-checks contents-to-body sections, question/sequence numbers-to-body, questions-to-answers/explanations, and indexes-to-entries.
 - Solves exercises before consulting keys and explanations. Vocabulary checks cover phonetics, parts of speech, senses, word forms, appendices, contents/index pages and grouped numbering.
 - Reads the same version three times: initial inspection, independent rereading, then a fresh reading followed by verification. Formal Mudu proofs follow actual revised versions and red-checks.
 - Distinguishes intentional blanks, brackets and distractors from errors; filters extraction noise, column-order failures and legitimate variants.
@@ -44,7 +44,7 @@ error type, problem and correction. Do not edit the manuscript.
 Flag uncertainties for the editor and deliver a Word report.
 ```
 
-The workflow is: assess reading method → identify structure and priorities → review using applicable rules → report. Sampling only selects the reading method. A model with image access checks scans and verifies disputed characters against the original page. See [SKILL.md](SKILL.md) and [workflow details](references/proofreading-workflow.md).
+The workflow is: assess reading method → identify structure and priorities → review using applicable rules → report. Structural alignment comes first: contents, body sections, question/sequence numbers, answers/explanations, and index entries are checked item by item. Sampling only selects the reading method. A model with image access checks scans and verifies disputed characters against the original page. See [SKILL.md](SKILL.md) and [workflow details](references/proofreading-workflow.md).
 
 **A concise entry point, with details loaded as needed.** Vocabulary books use entry rules; exercises use relevant grammar and answer checks. Tool arguments and JSON fields are read only when needed. Detailed language rules and positive/negative examples remain available.
 

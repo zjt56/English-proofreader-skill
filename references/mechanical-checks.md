@@ -7,7 +7,7 @@
 | 任务 | 工具 | AI仍须核对 |
 |---|---|---|
 | 读取与定位 | 宿主预览、prepare_review.py | 文字可信度、栏序、跨页及原页码 |
-| 索引/目录/序号 | cross_check_index.py、check_toc.py、check_sequence.py | 同版对应、收录口径、Day/节分组 |
+| 目录/正文章节/索引/序号 | check_toc.py、cross_check_index.py、check_sequence.py | 标题、起始页、漏列/错列、词条页码、Day/节分组及组内重号/漏号/错号 |
 | 题答编号/选项 | check_answer_key.py | 独立解题、答案及解析语义 |
 | 术语/体例混用 | check_consistency.py | 同一含义/范围、专名引文等例外 |
 | 改排核红 | 已有版本比较工具 | 逐项改对改全、误删错位及新增内容 |
