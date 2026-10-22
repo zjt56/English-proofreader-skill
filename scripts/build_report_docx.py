@@ -149,15 +149,21 @@ def make_document(report: dict[str, Any]) -> ET.Element:
             if not isinstance(location, dict):
                 continue
             add_paragraph(body, f"位置：{display(location.get('locator', ''))}", bold=True)
+            page = location.get("file_page") or location.get("page") or "见位置"
+            question = location.get("question") or location.get("question_id") or "未标明"
+            add_paragraph(body, f"页码：{display(page)}")
+            add_paragraph(body, f"题号：{display(question)}")
             quote = location.get("quote")
             if quote:
                 add_paragraph(body, f"原文证据：{display(quote)}")
                 error_type, suggested = location_revision(location)
                 add_paragraph(body, f"错误类型：{error_type}")
+                add_paragraph(body, f"具体问题：{display(issue.get('explanation') or issue.get('basis') or '请结合原文证据核对')}")
                 add_paragraph(body, f"建议改为：{suggested}（仅供编辑核对，未改动原稿）")
             elif location.get("error_type") or location.get("suggested"):
                 error_type, suggested = location_revision(location)
                 add_paragraph(body, f"错误类型：{error_type}")
+                add_paragraph(body, f"具体问题：{display(issue.get('explanation') or issue.get('basis') or '请结合位置核对')}")
                 add_paragraph(body, f"建议改为：{suggested}（仅供编辑核对，未改动原稿）")
         for key, label in ISSUE_FIELDS:
             value = issue.get(key)
